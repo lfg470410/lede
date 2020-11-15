@@ -1,109 +1,343 @@
+首页 联系我们
+搜索
+搜索
+GITHUB ACTIONS 在线云编译OPENWRT固件
+标签： ACTIONS    github  L大  openwrt
+
+前言：
+相信玩软路由的朋友都知道openwrt吧，想自己编译一个openwrt固件可是在线编译又很麻烦，费时又很久。
+
+最近新出来一个Github ACTIONS在线编译，让我们来一睹风采吧！！！
+
+教程：
+一：注册GITHUB账号
+打开github官网：https://github.com/
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+输入账号，邮箱，密码注册
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+点击验证
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+验证完后选择Next:Select a plan
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+选择第一个免费的即可
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+验证账号，到刚刚填入的邮箱地址点击验证地址
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+输入自己的仓库名称，非必须
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+账号创建完毕，出现以下界面拉到最下面，选择skip this step跳过即可。
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+仓库地址可以不重复设置了，非必须
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+二：激活GITHUB ACTIONS功能
+现在是自动激活的，不需要去手动激活了。
+
+三：FORK编译脚本
+项目地址：https://github.com/KFERMercer/OpenWrt-CI
+
+点击Fork
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+四：FORK大雕的源码
+项目地址：https://github.com/coolsnowwolf/lede
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+五：进入大雕的源码仓库
+记住，lede前面是自己的名称
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+进入这个目录
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+这个文件就是编译的脚本
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+点开这个文件，进行修改
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+修改的内容地址：
+
+https://raw.githubusercontent.com/KFERMercer/OpenWrt-CI/master/openwrt-ci.yml
+
+文件内容，这边备份了一份
+
+#
+# This is free software, lisence use MIT.
+# 
+# Copyright (C) 2019 P3TERX <https://p3terx.com>
+# Copyright (C) 2019 KFERMercer <KFER.Mercer@gmail.com>
 # 
 # <https://github.com/KFERMercer/OpenWrt-CI>
 #
-# Copyright (C) 2019 P3TERX
-#
-# Copyright (C) 2020 KFERMercer
-#
 name: OpenWrt-CI
-
 on:
-  schedule:
-    - cron: 0 20 * * *
-  release:
-    types: [published]
-
+  push:
+    branches: 
+      - master
+  # schedule:
+  #   - cron: 0 20 * * *
+  # release:
+  #   types: [published]
 jobs:
-
-  build_openwrt:
-
-    name: Build OpenWrt firmware
-
+  build:
     runs-on: ubuntu-latest
-
-    if: github.event.repository.owner.id == github.event.sender.id
-
     steps:
-
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@master
         with:
           ref: master
-
-      - name: Space cleanup
+      - name: Initialization environment
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
           docker rmi `docker images -q`
-          sudo rm -rf /usr/share/dotnet /etc/mysql /etc/php /etc/apt/sources.list.d
-          sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* mysql* php* android*
+          echo "Deleting files, please wait ..."
+          sudo rm -rf /usr/share/dotnet /etc/mysql /etc/php
+          sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* mysql* php*
           sudo -E apt-get update
-          sudo -E apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch python3 unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs gcc-multilib g++-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler antlr3 gperf swig
+          sudo -E apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler
           sudo -E apt-get -y autoremove --purge
           sudo -E apt-get clean
-
-          df -h
-
       - name: Update feeds
         run: |
-          sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-
-      - name: Generate configuration file
-        run: make defconfig
-
+      - name: Costom configure file
+        run: |
+          rm -f ./.config*
+          touch ./.config
+          #
+          # ========================固件定制部分========================
+          # 
+          # 
+          # 如果不对本区块做出任何编辑, 则生成默认配置固件. 
+          # 
+          # 以下为定制化固件选项和说明:
+          #
+          #
+          # 有些插件/选项是默认开启的, 如果想要关闭, 请参照以下示例进行编写:
+          # 
+          #          =========================================
+          #         |  # 取消编译VMware镜像:                   |
+          #         |  cat >> .config <<EOF                   |
+          #         |  # CONFIG_VMDK_IMAGES is not set        |
+          #         |  EOF                                    |
+          #          =========================================
+          #
+          # 
+          # 以下是一些提前准备好的一些插件选项.
+          # 直接取消注释相应代码块即可应用. 不要取消注释代码块上的汉字说明.
+          # 如果不需要代码块里的某一项配置, 只需要删除相应行.
+          #
+          # 如果需要其他插件, 请按照示例自行添加.
+          # 注意, 只需添加依赖链顶端的包. 如果你需要插件 A, 同时 A 依赖 B, 即只需要添加 A.
+          # 
+          # 无论你想要对固件进行怎样的定制, 都需要且只需要修改 EOF 回环内的内容.
+          # 
+          # 编译x64固件:
+          # cat >> .config <<EOF
+          # CONFIG_TARGET_x86=y
+          # CONFIG_TARGET_x86_64=y
+          # CONFIG_TARGET_x86_64_Generic=y
+          # EOF
+          # 固件压缩:
+          # cat >> .config <<EOF
+          # CONFIG_TARGET_IMAGES_GZIP=y
+          # EOF
+          # 编译UEFI固件:
+          # cat >> .config <<EOF
+          # CONFIG_EFI_IMAGES=y
+          # EOF
+          # IPv6支持:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_dnsmasq_full_dhcpv6=y
+          # CONFIG_PACKAGE_ipv6helper=y
+          # EOF
+          # 多文件系统支持:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_kmod-fs-nfs=y
+          # CONFIG_PACKAGE_kmod-fs-nfs-common=y
+          # CONFIG_PACKAGE_kmod-fs-nfs-v3=y
+          # CONFIG_PACKAGE_kmod-fs-nfs-v4=y
+          # CONFIG_PACKAGE_kmod-fs-ntfs=y
+          # CONFIG_PACKAGE_kmod-fs-squashfs=y
+          # EOF
+          # USB3.0支持:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_kmod-usb-ohci=y
+          # CONFIG_PACKAGE_kmod-usb-ohci-pci=y
+          # CONFIG_PACKAGE_kmod-usb2=y
+          # CONFIG_PACKAGE_kmod-usb2-pci=y
+          # CONFIG_PACKAGE_kmod-usb3=y
+          # EOF
+          # 常用LuCI插件选择:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_luci-app-adbyby-plus=y
+          # CONFIG_PACKAGE_luci-app-aria2=y
+          # CONFIG_PACKAGE_luci-app-baidupcs-web=y
+          # CONFIG_PACKAGE_luci-app-docker=y
+          # CONFIG_PACKAGE_luci-app-frpc=y
+          # CONFIG_PACKAGE_luci-app-hd-idle=y
+          # CONFIG_PACKAGE_luci-app-kodexplorer=y
+          # CONFIG_PACKAGE_luci-app-minidlna=y
+          # CONFIG_PACKAGE_luci-app-openvpn=y
+          # CONFIG_PACKAGE_luci-app-openvpn-server=y
+          # CONFIG_PACKAGE_luci-app-qbittorrent=y
+          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Kcptun=y
+          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks=y
+          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Server=y
+          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Socks=y
+          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_V2ray=y
+          # CONFIG_PACKAGE_luci-app-ttyd=y
+          # CONFIG_PACKAGE_luci-app-v2ray-server=y
+          # CONFIG_PACKAGE_luci-app-verysync=y
+          # CONFIG_PACKAGE_luci-app-webadmin=y
+          # CONFIG_PACKAGE_luci-app-wireguard=y
+          # CONFIG_PACKAGE_luci-app-wrtbwmon=y
+          # EOF
+          # LuCI主题:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_luci-theme-argon=y
+          # CONFIG_PACKAGE_luci-theme-netgear=y
+          # EOF
+          # 常用软件包:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_curl=y
+          # CONFIG_PACKAGE_htop=y
+          # CONFIG_PACKAGE_nano=y
+          # CONFIG_PACKAGE_screen=y
+          # CONFIG_PACKAGE_tree=y
+          # CONFIG_PACKAGE_vim-fuller=y
+          # CONFIG_PACKAGE_wget=y
+          # EOF
+          # 取消编译VMware镜像以及镜像填充 (不要删除被缩进的注释符号):
+          # cat >> .config <<EOF
+          # # CONFIG_TARGET_IMAGES_PAD is not set
+          # # CONFIG_VMDK_IMAGES is not set
+          # EOF
+          # 
+          # ========================固件定制部分结束========================
+          # 
+          sed -i 's/^[ \t]*//g' ./.config
+          make defconfig
       - name: Make download
         run: |
           make download -j8
+          find dl -size -1024c -exec ls -l {} \;
           find dl -size -1024c -exec rm -f {} \;
-
       - name: Compile firmware
         run: |
-          make -j$(nproc) || make -j1 V=s
-          echo "======================="
-          echo "Space usage:"
-          echo "======================="
-          df -h
-          echo "======================="
-          du -h --max-depth=1 ./ --exclude=build_dir --exclude=bin
-          du -h --max-depth=1 ./build_dir
-          du -h --max-depth=1 ./bin
-
-      - name: Prepare artifact
+          echo -e "$(nproc) thread build."
+          make -j$(nproc) V=s
+      - name: Assemble artifact
         run: |
-          mkdir -p ./artifact/firmware
-          mkdir -p ./artifact/package
-          mkdir -p ./artifact/buildinfo
-          rm -rf $(find ./bin/targets/ -type d -name "packages")
-          cp -rf $(find ./bin/targets/ -type f) ./artifact/firmware/
-          cp -rf $(find ./bin/packages/ -type f -name "*.ipk") ./artifact/package/
-          cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/buildinfo/
-
-      - name: Deliver buildinfo
-        uses: actions/upload-artifact@v2
+          rm -rf ./artifact/
+          mkdir -p ./artifact/
+          find ./bin/targets/ -name "*combined*img*" | xargs -i mv -f {} ./artifact/
+          find ./bin/targets/ -name "*sysupgrade*bin*" | xargs -i mv -f {} ./artifact/
+      - name: Upload artifact
+        uses: actions/upload-artifact@master
         with:
-          name: OpenWrt_buildinfo
-          path: ./artifact/buildinfo/
+          name: OpenWrt firmware
+          path: ./artifact/
+ 
 
-      - name: Deliver package
-        uses: actions/upload-artifact@v2
-        with:
-          name: OpenWrt_package
-          path: ./artifact/package/
+将里面的全选复制到我们的文件里
 
-      - name: Deliver firmware
-        uses: actions/upload-artifact@v2
-        with:
-          name: OpenWrt_firmware
-          path: ./bin/targets/
-  
+复制完毕后，点击提交
 
-      - name: Upload release asset
-        if: github.event == 'release'
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.YOURTOKEN }}
-          file: ./artifact/firmware/*
-          tag: ${{ github.ref }}
-          file_glob: true
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+直接提交修改即可
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+六：编译
+回到自己fork过来的仓库地址
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+点击Actions，选择继续运行
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+出现以下页面，代表上面步骤都无误了
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+点击上面的OpenWrt-CI进去，这就已经在编译了，以及编译需要的步骤，这个编译的时间大概需要2~3个小时，我们可以关闭电脑，等待它自动编译完成就好了。
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+如图所示，表示正在编译中
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+等待编译完成后，回到Github首页，点击lede项目
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+选择Actions
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+前面显示一个绿色的勾，代表已经编译完成，我们点击项目进去。
+
+选择右边的Artifacts，下载编译好的固件即可。
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+ 
+
+《GitHub ACTIONS 在线云编译OpenWRT固件》
+
+Enjoy~~
+
+ 
+
+本文地址：GitHub ACTIONS 在线云编译OpenWRT固件
+
+版权声明：本文为qq_35006858原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接和本声明。
+本文链接：https://blog.csdn.net/qq_35006858/article/details/103411914
+ 
+灰信网（软件开发博客聚合）
+程序员专属的优秀博客文章阅读平台
+
+GITHUB ACTIONS生成 SECRETS
+GITHUB ACTIONS 完成SPRING BOOT编译部署任务
+NUXTJS + GITHUB ACTIONS + LINUX 自动部署学习（包含阿里云ECS购买过程、传统部署流程、GITHUB ACTIONS）
+GITHUB ACTIONS，卧槽！牛批！
+GITHUB ACTIONS，卧槽！牛批！
+GITHUB ACTIONS，卧槽！牛批！
+GITHUB ACTIONS 学习指南
+GITHUB ACTIONS全方位演示
+GITHUB ACTIONS构建DOCKER镜像
+COPYRIGHT © 2010-2020 - ALL RIGHTS RESERVED - WWW.FREESION.COM
